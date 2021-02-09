@@ -124,7 +124,7 @@ class IperfServerStateDriver(object):
                         r'(?P<interval>\d+\.\d+-\d+\.\d+)\s+sec\s+'
                         r'(?P<transfer>\d+\.\d+)\s+'
                         r'(?P<transfer_unit>[KMG])Bytes\s+'
-                        r'(?P<bitrate>\d+)\s+Kbits/sec.*'), self.model.data),
+                        r'(?P<bitrate>\d+(\.\d+)?)\s+Kbits/sec.*'), self.model.data),
             (re.compile(r'^(- )+.*'), self.model.summary_divider),
         ]
 
