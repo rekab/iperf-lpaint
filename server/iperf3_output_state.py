@@ -1,4 +1,3 @@
-import pyswitch
 import re
 import transitions
 """
@@ -37,72 +36,105 @@ Server listening on 5201
 -----------------------------------------------------------
 """
 
-class IperfOutputStateModel(object):
+class InvalidDataUpdateException(Exception):
     pass
 
 
-class IperfServerStateDriver(object):
-    states = [
-            'not_started',              # state 0 is the initial state
-            'starting',
-            'startup',
-            'awaiting_connection',
-            'accepted_connection',
-            'main_header',
-            'data',
-            'data_end',
-            'summary_header',
-            'summary',
-    ]
+class UnknownLineException(Exception):
+    def __init__(self, model, line):
+        self.model = model
+        self.line = line
+        super().__init__('state={} but unknown line: {}'.format(model.state, line))
 
+
+class IperfOutputStateModel(object):
     def __init__(self,
             bitrate_subscriber=None,
             bitrate_summary_subscriber=None):
         self.bitrate_subscriber = bitrate_subscriber
         self.bitrate_summary_subscriber = bitrate_summary_subscriber
-        self.cur_state = states[0]
-        self.model = IperfOutputStateModel()
-        self.machine = transitions.Machine(
-                model=self.model, states=states, initial=states[0])
-        self.machine.add_transition(
-                trigger='on_start',
-                source='not_started',
-                dest='starting')
 
-        self.patterns
-        self.divider_pattern = re.compile(r'^-+$')
-        self.header_pattern = re.compile(r'^\[\s*\d+]\s+Interval\+Transfer.*')
-        self.server_listening_pattern = re.compile(r'^Server listening on \d+')
-        self.accepted_connection_pattern = re.compile(r'^Accepted connection from.*')
-        self.connection_info_pattern = re.compile(r'^\[\s*\d+]\s+local \d+\.\d+\.\d+\.\d+.*')
-        self.data_pattern = re.compile(r'\[\s*\d+]\s+local \d+\.\d+\.\d+\.\d+.*')
-        self.summary_divider_pattern = re.compile(r'^(- )+.*')
-    
+        self.cur_match = None
+
+    def receive_data(self):
+        print('got data: ', self.cur_match.groups())
+        if self.bitrate_subscriber is not None:
+            self.bitrate_subscriber(float(self.cur_match.group('bitrate'))) 
+
+    def receive_summary(self):
+        print('got data: summary', self.cur_match.groups())
+        if self.bitrate_summary_subscriber is not None:
+            self.bitrate_summary_subscriber(float(self.cur_match.group('bitrate'))) 
+
+
+class IperfServerStateDriver(object):
+    states = [
+        'not_started',              # state 0 is the initial state
+        'starting',
+        'awaiting_connection1',
+        'awaiting_connection2',
+        'accepted_connection1',
+        'accepted_connection2',
+        'data',
+        'summary',
+    ]
+    transitions = [
+        # startup and await connection
+        {'trigger': 'divider', 'source': 'not_started', 'dest': 'starting'},
+        {'trigger': 'server_listening', 'source': 'starting', 'dest': 'awaiting_connection1'},
+        {'trigger': 'divider', 'source': 'awaiting_connection1', 'dest': 'awaiting_connection2'},
+
+        # connection and await data
+        {'trigger': 'accepted_connection', 'source': 'awaiting_connection2', 'dest': 'accepted_connection1'},
+        {'trigger': 'connection_info', 'source': 'accepted_connection1', 'dest': 'accepted_connection2'},
+        {'trigger': 'header', 'source': 'accepted_connection2', 'dest': 'data'},
+
+        # this is the money trigger
+        {'trigger': 'data', 'source': 'data', 'dest': 'data', 'after': 'receive_data'},
+
+        # end
+        {'trigger': 'summary_divider', 'source': 'accepted_connection2', 'dest': 'summary'},
+        {'trigger': 'summary_divider', 'source': 'awaiting_data', 'dest': 'summary'},
+        {'trigger': 'summary_divider', 'source': 'data', 'dest': 'summary'},
+        {'trigger': 'header', 'source': 'summary', 'dest': 'summary'},
+        {'trigger': 'data', 'source': 'summary', 'dest': 'summary', 'after': 'receive_summary'},
+        {'trigger': 'divider', 'source': 'summary', 'dest': 'starting'},
+    ]
+
+    def __init__(self,
+            bitrate_subscriber=None,
+            bitrate_summary_subscriber=None):
+        self.model = IperfOutputStateModel(
+            bitrate_subscriber=bitrate_subscriber,
+            bitrate_summary_subscriber=bitrate_summary_subscriber)
+        self.machine = transitions.Machine(
+                model=self.model,
+                states=self.states,
+                transitions=self.transitions,
+                initial=self.states[0])
+
+        # list of patterns
+        self.pattern_triggers = [
+            (re.compile(r'^-+$'), self.model.divider),
+            (re.compile(r'^Server listening on \d+'), self.model.server_listening),
+            (re.compile(r'^Accepted connection from.*'), self.model.accepted_connection),
+            (re.compile(r'^\[\s*\d+\]\s+local \d+\.\d+\.\d+\.\d+.*'), self.model.connection_info),
+            (re.compile(r'^\[\s*ID\]\s+Interval\s+Transfer.*'), self.model.header),
+            (re.compile(r'\[\s*\d+\]\s+'
+                        r'(?P<interval>\d+\.\d+-\d+\.\d+)\s+sec\s+'
+                        r'(?P<transfer>\d+\.\d+)\s+'
+                        r'(?P<transfer_unit>[KMG])Bytes\s+'
+                        r'(?P<bitrate>\d+)\s+Kbits/sec.*'), self.model.data),
+            (re.compile(r'^(- )+.*'), self.model.summary_divider),
+        ]
 
     def receive_line(self, line):
         """
         Receive a line of text. Accepts lines with newline characters.
         """
         self.cur_line = line
-
-        if self.divider_pattern.match(line):
-            return self.machine.on_divider()
-
-        if self.header_pattern.match(line):
-            return self.machine.on_header()
-
-        if self.server_listening_pattern.match(line):
-            return self.machine.on_server_listening()
-
-        if self.accepted_connection_pattern.match(line):
-            return self.machine.on_accepted_connection()
-
-        if self.connection_info_pattern.match(line):
-            return self.machine.on_connection_info()
-
-        if self.data_pattern.match(line):
-            return self.on_data()
-
-        if self.summary_divider_pattern.match(line):
-            return self.on_summary_header()
-
+        for trigger in self.pattern_triggers:
+            self.model.cur_match = trigger[0].match(self.cur_line)
+            if self.model.cur_match:
+                return trigger[1]()
+        raise UnknownLineException(self.model, line)
