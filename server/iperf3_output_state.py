@@ -44,27 +44,34 @@ class UnknownLineException(Exception):
     def __init__(self, model, line):
         self.model = model
         self.line = line
-        super().__init__('state={} but unknown line: {}'.format(model.state, line))
+        super().__init__(f'state={model.state} but unknown line: {line}')
 
 
 class IperfOutputStateModel(object):
     def __init__(self,
             bitrate_subscriber=None,
-            bitrate_summary_subscriber=None):
+            bitrate_summary_subscriber=None,
+            listening_subscriber=None):
         self.bitrate_subscriber = bitrate_subscriber
         self.bitrate_summary_subscriber = bitrate_summary_subscriber
+        self.listening_subscriber = listening_subscriber
 
         self.cur_match = None
 
     def receive_data(self):
         print('got data: ', self.cur_match.groups())
         if self.bitrate_subscriber is not None:
-            self.bitrate_subscriber(float(self.cur_match.group('bitrate'))) 
+            self.bitrate_subscriber(float(self.cur_match.group('bitrate')), self.cur_match.group('bitrate_unit')) 
 
     def receive_summary(self):
         print('got data: summary', self.cur_match.groups())
         if self.bitrate_summary_subscriber is not None:
-            self.bitrate_summary_subscriber(float(self.cur_match.group('bitrate'))) 
+            self.bitrate_summary_subscriber(float(self.cur_match.group('bitrate')), self.cur_match.group('bitrate_unit')) 
+
+    def listening(self):
+        print('listening')
+        if self.listening_subscriber is not None:
+            self.listening_subscriber()
 
 
 class IperfServerStateDriver(object):
@@ -82,7 +89,7 @@ class IperfServerStateDriver(object):
         # startup and await connection
         {'trigger': 'divider', 'source': 'not_started', 'dest': 'starting'},
         {'trigger': 'server_listening', 'source': 'starting', 'dest': 'awaiting_connection1'},
-        {'trigger': 'divider', 'source': 'awaiting_connection1', 'dest': 'awaiting_connection2'},
+        {'trigger': 'divider', 'source': 'awaiting_connection1', 'dest': 'awaiting_connection2', 'after': 'listening'},
 
         # connection and await data
         {'trigger': 'accepted_connection', 'source': 'awaiting_connection2', 'dest': 'accepted_connection1'},
@@ -103,10 +110,12 @@ class IperfServerStateDriver(object):
 
     def __init__(self,
             bitrate_subscriber=None,
-            bitrate_summary_subscriber=None):
+            bitrate_summary_subscriber=None,
+            listening_subscriber=None):
         self.model = IperfOutputStateModel(
             bitrate_subscriber=bitrate_subscriber,
-            bitrate_summary_subscriber=bitrate_summary_subscriber)
+            bitrate_summary_subscriber=bitrate_summary_subscriber,
+            listening_subscriber=listening_subscriber)
         self.machine = transitions.Machine(
                 model=self.model,
                 states=self.states,
@@ -124,7 +133,8 @@ class IperfServerStateDriver(object):
                         r'(?P<interval>\d+\.\d+-\d+\.\d+)\s+sec\s+'
                         r'(?P<transfer>\d+\.\d+)\s+'
                         r'(?P<transfer_unit>[KMG])Bytes\s+'
-                        r'(?P<bitrate>\d+(\.\d+)?)\s+Kbits/sec.*'), self.model.data),
+                        r'(?P<bitrate>\d+(\.\d+)?)\s+'
+                        r'(?P<bitrate_unit>[KMG])bits/sec.*'), self.model.data),
             (re.compile(r'^(- )+.*'), self.model.summary_divider),
         ]
 
