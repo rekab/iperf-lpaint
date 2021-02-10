@@ -7,7 +7,8 @@ import lightbar
 
 # iperf3  -B 10.5.5.1 -s -i .5 -f k --forceflush
 IPERF3_SERVER_COMMAND = [
-    '/usr/bin/iperf3',
+    #'/usr/bin/iperf3',
+    '/home/pi/download/iperf-3.9/src/iperf3',
     '-B', '10.5.5.1',   # bind to wlan ip
     '-s',               # server
     '-i', '0.5',        # print stats every .5 seconds
@@ -18,7 +19,8 @@ IPERF3_SERVER_COMMAND = [
 
 async def read_iperf_proc(proc, state_machine, killer_lambda):
     while True:
-        line = await proc.stdout.readline()
+        data = await proc.stdout.readline()
+        line = data.decode('ascii').rstrip()
         print(f'read line: {line}')
         state_machine.receive_line(line)
         if proc.stdout.at_eof():

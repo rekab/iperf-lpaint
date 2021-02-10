@@ -139,9 +139,6 @@ class IperfServerStateDriver(object):
         ]
 
     def receive_line(self, line):
-        """
-        Receive a line of text. Accepts lines with newline characters.
-        """
         self.cur_line = line
         for trigger in self.pattern_triggers:
             self.model.cur_match = trigger[0].match(self.cur_line)

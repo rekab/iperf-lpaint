@@ -64,7 +64,7 @@ Server listening on 5201
 class TestStateMachine(unittest.TestCase):
     def _plug_and_chug(self, input_data, state_machine):
         """Feed"""
-        lines = [l + '\n' for l in input_data.split('\n') if l]
+        lines = [l for l in input_data.split('\n') if l]
         for line in lines:
             state_machine.receive_line(line)
 
