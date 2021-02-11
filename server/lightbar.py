@@ -15,6 +15,8 @@ UNIT_MULTIPLIER = {
 # TODO: max bitrate should be calibrated
 MAX_BITRATE = 3000 * UNIT_MULTIPLIER['K']
 
+RED_BAND_WIDTH = 5
+
 
 def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
     # Sanity check
@@ -30,11 +32,27 @@ def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
     return (r, g, b)
 
 
-async def listenloop():
+async def listenloop(dots, num_pixels):
+    reds_down = [
+            (r, int(r*r/2000), int((r*r)/2755))
+            for r in range(0, 255, int(255/RED_BAND_WIDTH))]
+    reds_up = reds_down[:]
+    reds_up.reverse()
+    reds = reds_down + reds_up
+    num_reds = len(reds)
+    direction = 1
+    start = 0
     try:
         while True:
-            print('still listening...')
-            await asyncio.sleep(1)
+            for red_idx in range(0, len(reds), 1):
+                dots[start + red_idx] = reds[red_idx]
+
+            start += direction
+            if start+len(reds) >= num_pixels or start <= 0:
+                direction *= -1
+                start += 2*direction
+
+            await asyncio.sleep(.02)
     except asyncio.CancelledError:
         print('listenloop canceled')
 
@@ -66,9 +84,7 @@ class DotPainter(object):
             # can be sent
             print('never turned off animation task')
             return
-        #self.dots.fill((0, 0, 0))
+        self.dots.fill((0, 0, 0))
         loop = asyncio.get_running_loop()
-        self.animation_task = loop.create_task(listenloop())
-
-
-# TODO: connected/disconnected subscriber
+        self.animation_task = loop.create_task(
+                listenloop(self.dots, self.num_pixels))
