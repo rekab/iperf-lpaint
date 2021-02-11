@@ -95,6 +95,8 @@ class IperfServerStateDriver(object):
         {'trigger': 'accepted_connection', 'source': 'awaiting_connection2', 'dest': 'accepted_connection1'},
         {'trigger': 'connection_info', 'source': 'accepted_connection1', 'dest': 'accepted_connection2'},
         {'trigger': 'header', 'source': 'accepted_connection2', 'dest': 'data'},
+        # immediate disconnect: summary
+        {'trigger': 'summary_divider', 'source': 'accepted_connection1', 'dest': 'summary'},
 
         # this is the money trigger
         {'trigger': 'data', 'source': 'data', 'dest': 'data', 'after': 'receive_data'},
@@ -131,8 +133,8 @@ class IperfServerStateDriver(object):
             (re.compile(r'^\[\s*ID\]\s+Interval\s+Transfer.*'), self.model.header),
             (re.compile(r'\[\s*\d+\]\s+'
                         r'(?P<interval>\d+\.\d+-\d+\.\d+)\s+sec\s+'
-                        r'(?P<transfer>\d+\.\d+)\s+'
-                        r'(?P<transfer_unit>[KMG])Bytes\s+'
+                        r'(?P<transfer>\d+(\.\d+)?)\s+'
+                        r'(?P<transfer_unit>[KMG])?Bytes\s+'
                         r'(?P<bitrate>\d+(\.\d+)?)\s+'
                         r'(?P<bitrate_unit>[KMG])bits/sec.*'), self.model.data),
             (re.compile(r'^(- )+.*'), self.model.summary_divider),

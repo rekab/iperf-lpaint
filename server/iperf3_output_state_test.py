@@ -61,6 +61,36 @@ Server listening on 5201
 -----------------------------------------------------------
 """
 
+ZERO_BYTES_INPUT = """-----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+Accepted connection from 10.5.5.2, port 60961
+[  5] local 10.5.5.1 port 5201 connected to 10.5.5.2 port 37165
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-0.50   sec  0.00 Bytes  0.00 Kbits/sec  0.000 ms  0/0 (0%)
+"""
+
+INTEGER_BITRATE_INPUT = """-----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+Accepted connection from 10.5.5.2, port 60961
+[  5] local 10.5.5.1 port 5201 connected to 10.5.5.2 port 37165
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-0.50   sec  0.00 Bytes  0.00 Kbits/sec  0.000 ms  0/0 (0%)
+[  5]   1.50-2.00   sec   160 KBytes  2620 Kbits/sec  1.038 ms  0/113 (0%)
+"""
+
+
+IMMEDIATE_DISCO_INPUT = """-----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+Accepted connection from 10.5.5.2, port 60961
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-1612769692.40 sec  36.8 KBytes  0.00 Kbits/sec  0.097 ms  0/26 (0%)  receiver
+"""
+
+
 class TestStateMachine(unittest.TestCase):
     def _plug_and_chug(self, input_data, state_machine):
         """Feed"""
@@ -121,8 +151,30 @@ class TestStateMachine(unittest.TestCase):
         self.assertEqual(2, len(mock_bitrate_summary_subscriber.mock_calls))
         self.assertEqual(3, len(mock_listening_subscriber.mock_calls))
 
-    def test_garbled(self):
-        pass
+    def test_zero_bitrate(self):
+        mock_bitrate_subscriber = Mock(return_value=None)
+        state_machine = iperf3_output_state.IperfServerStateDriver(
+            bitrate_subscriber=mock_bitrate_subscriber)
+        self._plug_and_chug(ZERO_BYTES_INPUT, state_machine)
+
+        mock_bitrate_subscriber.assert_has_calls([call(0.0, 'K')])
+
+    def test_integer_bitrate(self):
+        mock_bitrate_subscriber = Mock(return_value=None)
+        state_machine = iperf3_output_state.IperfServerStateDriver(
+            bitrate_subscriber=mock_bitrate_subscriber)
+        self._plug_and_chug(INTEGER_BITRATE_INPUT, state_machine)
+
+        mock_bitrate_subscriber.assert_has_calls([call(0.0, 'K')])
+
+    def test_immediate_disco(self):
+        mock_bitrate_summary_subscriber = Mock(return_value=None)
+        state_machine = iperf3_output_state.IperfServerStateDriver(
+            bitrate_summary_subscriber=mock_bitrate_summary_subscriber)
+        self._plug_and_chug(IMMEDIATE_DISCO_INPUT, state_machine)
+        mock_bitrate_summary_subscriber.assert_has_calls([call(0.0, 'K')])
+        self.assertEqual(1, len(mock_bitrate_summary_subscriber.mock_calls))
+
 
 if __name__ == '__main__':
     unittest.main()
