@@ -90,6 +90,43 @@ Accepted connection from 10.5.5.2, port 60961
 [  5]   0.00-1612769692.40 sec  36.8 KBytes  0.00 Kbits/sec  0.097 ms  0/26 (0%)  receiver
 """
 
+CLIENT_BOGUS_INPUT = """-----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+Accepted connection from 10.5.5.2, port 60961
+- - - - - - - - - - - - - - - - - - - - - - - - -
+WARNING:  Size of data read does not correspond to offered length
+"""
+
+CLIENT_CRASH_INPUT = """-----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+Accepted connection from 10.5.5.2, port 51513
+iperf3: the client has unexpectedly closed the connection
+-----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+"""
+
+CLIENT_KILLED_INPUT = """-----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+Accepted connection from 10.5.5.2, port 60961
+[  5] local 10.5.5.1 port 5201 connected to 10.5.5.2 port 37165
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  5]   0.00-0.50   sec  0.00 Bytes  0.00 Kbits/sec  0.000 ms  0/0 (0%)
+[  6]  95.50-96.00  sec  63.6 KBytes  1043 Kbits/sec  0.487 ms  0/45 (0%)  
+[  6]  95.50-96.00  sec  63.6 KBytes  1043 Kbits/sec  0.487 ms  0/45 (0%)  
+- - - - - - - - - - - - - - - - - - - - - - - - -
+[ ID] Interval           Transfer     Bitrate         Jitter    Lost/Total Datagrams
+[  6]   0.00-96.00  sec  11.9 MBytes  1037 Kbits/sec  0.256 ms  32/8623 (0.37%)  receiver
+iperf3: the client has terminated
+-----------------------------------------------------------
+Server listening on 5201
+-----------------------------------------------------------
+"""
+
+
 
 class TestStateMachine(unittest.TestCase):
     def _plug_and_chug(self, input_data, state_machine):
@@ -173,6 +210,28 @@ class TestStateMachine(unittest.TestCase):
             bitrate_summary_subscriber=mock_bitrate_summary_subscriber)
         self._plug_and_chug(IMMEDIATE_DISCO_INPUT, state_machine)
         mock_bitrate_summary_subscriber.assert_has_calls([call(0.0, 'K')])
+        self.assertEqual(1, len(mock_bitrate_summary_subscriber.mock_calls))
+
+    def test_client_bogus(self):
+        mock_bitrate_summary_subscriber = Mock(return_value=None)
+        state_machine = iperf3_output_state.IperfServerStateDriver(
+            bitrate_summary_subscriber=mock_bitrate_summary_subscriber)
+        self._plug_and_chug(CLIENT_BOGUS_INPUT, state_machine)
+        self.assertEqual(0, len(mock_bitrate_summary_subscriber.mock_calls))
+
+    def test_client_crash(self):
+        mock_bitrate_summary_subscriber = Mock(return_value=None)
+        state_machine = iperf3_output_state.IperfServerStateDriver(
+            bitrate_summary_subscriber=mock_bitrate_summary_subscriber)
+        self._plug_and_chug(CLIENT_CRASH_INPUT, state_machine)
+        self.assertEqual(0, len(mock_bitrate_summary_subscriber.mock_calls))
+
+    def test_client_killed(self):
+        mock_bitrate_summary_subscriber = Mock(return_value=None)
+        state_machine = iperf3_output_state.IperfServerStateDriver(
+            bitrate_summary_subscriber=mock_bitrate_summary_subscriber)
+        self._plug_and_chug(CLIENT_KILLED_INPUT, state_machine)
+        mock_bitrate_summary_subscriber.assert_has_calls([call(1037.0, 'K')])
         self.assertEqual(1, len(mock_bitrate_summary_subscriber.mock_calls))
 
 
