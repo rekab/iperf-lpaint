@@ -6,11 +6,14 @@ log() {
 
 
 LPAINT_OFF_FILE=$HOME/turn_off_lpaint
-if [ -e $LPAINT_OFF_FILE ] ;
-then
-  log "$LPAINT_OFF_FILE exists, so lpaint will not run."
-  exit
-fi
+
+check_lpaint_off_file() {
+  if [ -e $LPAINT_OFF_FILE ] ;
+  then
+    log "$LPAINT_OFF_FILE exists, so lpaint will not run."
+    exit
+  fi
+}
 
 set -e # exit on error
 set -x # debug
@@ -25,6 +28,7 @@ log "starting"
 
 while true ;
 do
+  check_lpaint_off_file
   echo "launching iperf client..."
   if iperf3 -B $BIND_ADDR -c $SERVER_ADDR -u -t $RUN_DURATION_SECS -b $BITRATE;
   then
