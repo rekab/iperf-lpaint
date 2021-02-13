@@ -1,5 +1,17 @@
 #!/bin/bash
 
+log() {
+  echo "$0: " $(date +'%Y-%m-%d %H:%M:%S'): "$@"
+}
+
+
+LPAINT_OFF_FILE=$HOME/turn_off_lpaint
+if [ -e $LPAINT_OFF_FILE ] ;
+then
+  log "$LPAINT_OFF_FILE exists, so lpaint will not run."
+  exit
+fi
+
 set -e # exit on error
 set -x # debug
 
@@ -7,10 +19,7 @@ BIND_ADDR=10.5.5.2
 SERVER_ADDR=10.5.5.1
 RUN_DURATION_SECS=3600
 BITRATE=0 # unlimited
-
-log() {
-  echo $(date +'%Y-%m-%d %H:%M:%S'): "$@"
-}
+SLEEP_DURATION_SECS=5
 
 log "starting"
 
@@ -23,6 +32,6 @@ do
   else
     log "return code: $?"
   fi
-  log "sleeping 5 seconds before retrying"
-  sleep 5
+  log "sleeping $SLEEP_DURATION_SECS seconds before retrying"
+  sleep $SLEEP_DURATION_SECS
 done
