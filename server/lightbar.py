@@ -7,14 +7,16 @@ BRIGHTNESS = 0.09
 
 
 UNIT_MULTIPLIER = {
+        '': (1.0/1024.0),
         'K': 1.0,
         'M': 1024.0,
         'G': 1024.0 * 1024.0,
         }
 
-# TODO: max bitrate should be calibrated
-MAX_BITRATE = 3000 * UNIT_MULTIPLIER['K']
+# max was calibrated at home
+MAX_BITRATE = 20000 * UNIT_MULTIPLIER['K']
 
+# how wide the cylon-esque red light thing is
 RED_BAND_WIDTH = 5
 
 
