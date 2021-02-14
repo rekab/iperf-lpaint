@@ -31,6 +31,32 @@ async def read_iperf_proc(proc, state_machine, killer_lambda):
     atexit.unregister(killer_lambda)
 
 
+class DeadConnectionMonitor(object):
+    """Watches for too many zeros.
+
+    If the iperf client can't reach the server because it fell off wifi, iperf
+    may keep waiting indefinitely.
+    """
+
+    def __init__(self, iperf_pid, max_num_zero_byte_transfers=30):
+        self.iperf_pid = iperf_pid
+        self.max_num_zero_byte_transfers = max_num_zero_byte_transfers
+        self.num_sequential_zero_byte_transfers = 0
+        self.prev_transfer = None
+
+    def transfer_subscriber(self, num_bytes, unit):
+        if num_bytes == 0.0:
+            if self.prev_transfer == 0.0:
+                self.num_sequential_zero_byte_transfers += 1
+        else:
+            self.num_sequential_zero_byte_transfers = 1
+
+        if self.num_sequential_zero_byte_transfers >= self.max_num_zero_byte_transfers:
+            print(f'killing iperf pid {self.iperf_pid}')
+            os.kill(self.iperf_pid, 15)
+        self.prev_transfer = num_bytes
+
+
 async def run_iperf_server():
     dotpainter = lightbar.DotPainter()
     proc = await asyncio.create_subprocess_exec(
@@ -40,8 +66,10 @@ async def run_iperf_server():
     killer_lambda = lambda pid: os.kill(proc.pid, 15)
     atexit.register(killer_lambda, proc.pid)
 
+
     state_machine = iperf3_output_state.IperfServerStateDriver(
-            bitrate_subscriber=dotpainter.bitrate_subscriber,
+            #bitrate_subscriber=dotpainter.bitrate_subscriber,
+            jitter_subscriber=dotpainter.jitter_subscriber,
             listening_subscriber=dotpainter.listening_subscriber)
 
 

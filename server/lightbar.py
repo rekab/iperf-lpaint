@@ -13,7 +13,8 @@ UNIT_MULTIPLIER = {
         'G': 1024.0 * 1024.0,
         }
 
-MAX_BITRATE = 1300 * UNIT_MULTIPLIER['K']
+MAX_BITRATE = 1300.0 * UNIT_MULTIPLIER['K']
+MAX_JITTER = 100.0
 
 # how wide the cylon-esque red light thing is
 RED_BAND_WIDTH = 5
@@ -74,8 +75,18 @@ class DotPainter(object):
             self.animation_task = None
 
         bitrate *= UNIT_MULTIPLIER[bitrate_unit]
-        color = kbyte_rgb(bitrate)
+        color = kbyte_rgb(bitrate, maximum=MAX_BITRATE)
         print(f'bitrate={bitrate} color={color}')
+        self.dots.fill(color)
+
+    def jitter_subscriber(self, jitter_ms):
+        if self.animation_task is not None:
+            print('canceling animation task')
+            self.animation_task.cancel()
+            self.animation_task = None
+
+        color = kbyte_rgb(jitter_ms, maximum=MAX_JITTER)
+        print(f'jitter_ms={jitter_ms} color={color}')
         self.dots.fill(color)
 
     def listening_subscriber(self):
