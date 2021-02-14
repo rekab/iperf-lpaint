@@ -13,8 +13,7 @@ UNIT_MULTIPLIER = {
         'G': 1024.0 * 1024.0,
         }
 
-# max was calibrated at home
-MAX_BITRATE = 20000 * UNIT_MULTIPLIER['K']
+MAX_BITRATE = 1000 * UNIT_MULTIPLIER['K']
 
 # how wide the cylon-esque red light thing is
 RED_BAND_WIDTH = 5
