@@ -135,13 +135,15 @@ class TestStateMachine(unittest.TestCase):
         for line in lines:
             state_machine.receive_line(line)
 
-    def test_simple_bitrate(self):
+    def test_simple(self):
         mock_bitrate_subscriber = Mock(return_value=None)
         mock_bitrate_summary_subscriber = Mock(return_value=None)
         mock_listening_subscriber = Mock(return_value=None)
+        mock_jitter_subscriber = Mock(return_value=None)
         state_machine = iperf3_output_state.IperfServerStateDriver(
             bitrate_subscriber=mock_bitrate_subscriber,
             bitrate_summary_subscriber=mock_bitrate_summary_subscriber,
+            jitter_subscriber=mock_jitter_subscriber,
             listening_subscriber=mock_listening_subscriber)
         self._plug_and_chug(SIMPLE_INPUT, state_machine)
 
@@ -149,8 +151,16 @@ class TestStateMachine(unittest.TestCase):
         mock_bitrate_subscriber.assert_has_calls(
             [call(1042.0, 'K'), call(1081.0, 'K')])
         self.assertEqual(2, len(mock_bitrate_subscriber.mock_calls))
+
+        # verify bitrate summary
         mock_bitrate_summary_subscriber.assert_has_calls([call(1041.0, 'K')])
         self.assertEqual(1, len(mock_bitrate_summary_subscriber.mock_calls))
+
+        # verify jitter
+        mock_jitter_subscriber.assert_has_calls([call(0.598), call(0.226)])
+        self.assertEqual(2, len(mock_jitter_subscriber.mock_calls))
+
+        # verify listening
         self.assertEqual(2, len(mock_listening_subscriber.mock_calls))
 
     def test_truncated(self):
