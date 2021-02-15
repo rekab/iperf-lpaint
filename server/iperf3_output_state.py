@@ -16,11 +16,13 @@ class UnknownLineException(Exception):
 class IperfOutputStateModel(object):
     def __init__(self,
             bitrate_subscriber=None,
+            jitter_subscriber=None,
             bitrate_summary_subscriber=None,
             listening_subscriber=None):
         self.bitrate_subscriber = bitrate_subscriber
         self.bitrate_summary_subscriber = bitrate_summary_subscriber
         self.listening_subscriber = listening_subscriber
+        self.jitter_subscriber = jitter_subscriber
 
         self.cur_match = None
 
@@ -30,6 +32,9 @@ class IperfOutputStateModel(object):
             self.bitrate_subscriber(
                     float(self.cur_match.group('bitrate')),
                     self.cur_match.group('bitrate_unit'))
+        if self.jitter_subscriber is not None:
+            self.jitter_subscriber(
+                    float(self.cur_match.group('jitter')))
 
     def receive_summary(self):
         print('got data: summary', self.cur_match.groups())
@@ -87,10 +92,12 @@ class IperfServerStateDriver(object):
 
     def __init__(self,
             bitrate_subscriber=None,
+            jitter_subscriber=None,
             bitrate_summary_subscriber=None,
             listening_subscriber=None):
         self.model = IperfOutputStateModel(
             bitrate_subscriber=bitrate_subscriber,
+            jitter_subscriber=jitter_subscriber,
             bitrate_summary_subscriber=bitrate_summary_subscriber,
             listening_subscriber=listening_subscriber)
         self.machine = transitions.Machine(
@@ -111,7 +118,8 @@ class IperfServerStateDriver(object):
                         r'(?P<transfer>\d+(\.\d+)?)\s+'
                         r'(?P<transfer_unit>[KMG])?Bytes\s+'
                         r'(?P<bitrate>\d+(\.\d+)?)\s+'
-                        r'(?P<bitrate_unit>[KMG])bits/sec.*'), self.model.data),
+                        r'(?P<bitrate_unit>[KMG])bits/sec\s+'
+                        r'(?P<jitter>\d+(\.\d+)?) ms\s+.*'), self.model.data),
             (re.compile(r'^(- )+.*'), self.model.summary_divider),
             (re.compile(r'^iperf3: the client'), self.model.client_closed),
             # this might need more investigation

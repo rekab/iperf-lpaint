@@ -13,11 +13,25 @@ UNIT_MULTIPLIER = {
         'G': 1024.0 * 1024.0,
         }
 
-MAX_BITRATE = 1000 * UNIT_MULTIPLIER['K']
+MAX_BITRATE = 1300.0 * UNIT_MULTIPLIER['K']
+MAX_JITTER = 100.0
 
 # how wide the cylon-esque red light thing is
 RED_BAND_WIDTH = 5
 
+
+#def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
+#    # Sanity check
+#    if value > maximum:
+#        print(f'value {value} exceeds maximum {maximum}')
+#        maximum = value
+#
+#    minimum, maximum = float(minimum), float(maximum)
+#    ratio = 2 * (value-minimum) / (maximum - minimum)
+#    b = int(max(0, 255*(1 - ratio)))
+#    r = int(max(0, 255*(ratio - 1)))
+#    g = 255 - b - r
+#    return (r, g, b)
 
 def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
     # Sanity check
@@ -26,10 +40,14 @@ def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
         maximum = value
 
     minimum, maximum = float(minimum), float(maximum)
-    ratio = 2 * (value-minimum) / (maximum - minimum)
-    b = int(max(0, 255*(1 - ratio)))
-    r = int(max(0, 255*(ratio - 1)))
-    g = 255 - b - r
+
+    red_ratio = pow((value - minimum), 1.4) / (maximum - minimum)
+    #blue_ratio = pow((value - minimum), .8) / (maximum - minimum)
+    green_ratio = pow((value - minimum), 1.7) / (maximum - minimum)
+
+    r = min(255, int(max(0, 255*(1 - red_ratio))))
+    g = min(255, int(max(0, 255*(1 - green_ratio))))
+    b = min(255, max(0, 255 - (.3*r) - (.7*g)))
     return (r, g, b)
 
 
@@ -74,8 +92,18 @@ class DotPainter(object):
             self.animation_task = None
 
         bitrate *= UNIT_MULTIPLIER[bitrate_unit]
-        color = kbyte_rgb(bitrate)
+        color = kbyte_rgb(bitrate, maximum=MAX_BITRATE)
         print(f'bitrate={bitrate} color={color}')
+        self.dots.fill(color)
+
+    def jitter_subscriber(self, jitter_ms):
+        if self.animation_task is not None:
+            print('canceling animation task')
+            self.animation_task.cancel()
+            self.animation_task = None
+
+        color = kbyte_rgb(jitter_ms, maximum=MAX_JITTER)
+        print(f'jitter_ms={jitter_ms} color={color}')
         self.dots.fill(color)
 
     def listening_subscriber(self):
