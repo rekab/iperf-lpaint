@@ -41,9 +41,9 @@ def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
 
     minimum, maximum = float(minimum), float(maximum)
 
-    red_ratio = pow((value - minimum), .9) / (maximum - minimum)
+    red_ratio = pow((value - minimum), 1.4) / (maximum - minimum)
     #blue_ratio = pow((value - minimum), .8) / (maximum - minimum)
-    green_ratio = pow((value - minimum), 1.3) / (maximum - minimum)
+    green_ratio = pow((value - minimum), 1.7) / (maximum - minimum)
 
     r = min(255, int(max(0, 255*(1 - red_ratio))))
     g = min(255, int(max(0, 255*(1 - green_ratio))))
