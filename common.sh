@@ -18,7 +18,7 @@ check_lpaint_off_file() {
   if [ -e $LPAINT_OFF_FILE ] ;
   then
     log "$LPAINT_OFF_FILE exists, so lpaint will not run."
-    exit
+    exit 1
   fi
 }
 
@@ -33,6 +33,8 @@ loop_command() {
     else
       log "return code: $?"
     fi
+    log "killing any remaining iperf3 processes"
+    killall iperf3 || log "no iperf to kill"
 
     log "sleeping $LOOP_SLEEP_DURATION_SECS seconds before retrying"
     sleep $LOOP_SLEEP_DURATION_SECS
