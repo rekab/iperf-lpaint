@@ -20,6 +20,19 @@ MAX_JITTER = 100.0
 RED_BAND_WIDTH = 5
 
 
+#def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
+#    # Sanity check
+#    if value > maximum:
+#        print(f'value {value} exceeds maximum {maximum}')
+#        maximum = value
+#
+#    minimum, maximum = float(minimum), float(maximum)
+#    ratio = 2 * (value-minimum) / (maximum - minimum)
+#    b = int(max(0, 255*(1 - ratio)))
+#    r = int(max(0, 255*(ratio - 1)))
+#    g = 255 - b - r
+#    return (r, g, b)
+
 def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
     # Sanity check
     if value > maximum:
@@ -27,10 +40,14 @@ def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
         maximum = value
 
     minimum, maximum = float(minimum), float(maximum)
-    ratio = 2 * (value-minimum) / (maximum - minimum)
-    b = int(max(0, 255*(1 - ratio)))
-    r = int(max(0, 255*(ratio - 1)))
-    g = 255 - b - r
+
+    red_ratio = pow((value - minimum), .9) / (maximum - minimum)
+    #blue_ratio = pow((value - minimum), .8) / (maximum - minimum)
+    green_ratio = pow((value - minimum), 1.3) / (maximum - minimum)
+
+    r = min(255, int(max(0, 255*(1 - red_ratio))))
+    g = min(255, int(max(0, 255*(1 - green_ratio))))
+    b = min(255, max(0, 255 - (.3*r) - (.7*g)))
     return (r, g, b)
 
 
