@@ -74,7 +74,7 @@ async def run_iperf_server():
             listening_subscriber=dotpainter.listening_subscriber)
 
     app = web.Application()
-    handler = http_handlers.Handler()
+    handler = http_handlers.Handler(state_machine, dotpainter)
     app.add_routes([web.get('/', handler.status)])
     runner = web.AppRunner(app)
     await runner.setup()

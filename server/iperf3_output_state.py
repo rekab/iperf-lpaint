@@ -1,4 +1,5 @@
 import re
+import time
 import transitions
 
 
@@ -90,6 +91,8 @@ class IperfServerStateDriver(object):
         {'trigger': 'client_closed', 'source': 'summary', 'dest': 'not_started'},
     ]
 
+    MAX_LINE_BUFFER_SIZE=50
+
     def __init__(self,
             bitrate_subscriber=None,
             jitter_subscriber=None,
@@ -105,6 +108,7 @@ class IperfServerStateDriver(object):
                 states=self.states,
                 transitions=self.transitions,
                 initial=self.states[0])
+        self.line_buffer = []
 
         # list of patterns
         self.pattern_triggers = [
@@ -128,8 +132,18 @@ class IperfServerStateDriver(object):
 
     def receive_line(self, line):
         self.cur_line = line
+        while len(self.line_buffer) >= self.MAX_LINE_BUFFER_SIZE:
+            self.line_buffer.pop(0)
+        self.line_buffer.append(time.ctime() + ': ' + line)
+
         for trigger in self.pattern_triggers:
             self.model.cur_match = trigger[0].match(self.cur_line)
             if self.model.cur_match:
                 return trigger[1]()
         raise UnknownLineException(self.model, line)
+
+    def get_state(self):
+        return self.model.state
+
+    def get_line_buffer(self):
+        return self.line_buffer
