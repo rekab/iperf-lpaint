@@ -27,7 +27,7 @@ class IperfOutputStateModel(object):
         self.cur_match = None
 
     def receive_data(self):
-        print('got data: ', self.cur_match.groups())
+        #print('got data: ', self.cur_match.groups())
         if self.bitrate_subscriber is not None:
             self.bitrate_subscriber(
                     float(self.cur_match.group('bitrate')),
@@ -37,14 +37,14 @@ class IperfOutputStateModel(object):
                     float(self.cur_match.group('jitter')))
 
     def receive_summary(self):
-        print('got data: summary', self.cur_match.groups())
+        #print('got data: summary', self.cur_match.groups())
         if self.bitrate_summary_subscriber is not None:
             self.bitrate_summary_subscriber(
                     float(self.cur_match.group('bitrate')),
                     self.cur_match.group('bitrate_unit'))
 
     def listening(self):
-        print('listening')
+        #print('listening')
         if self.listening_subscriber is not None:
             self.listening_subscriber()
 
