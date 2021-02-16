@@ -1,7 +1,7 @@
 # Common functions and variables
 
 set -e # exit on error
-set -x # debug
+#set -x # debug
 
 log() {
   echo "$0: " $(date +'%Y-%m-%d %H:%M:%S'): "$@"
