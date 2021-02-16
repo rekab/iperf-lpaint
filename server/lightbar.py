@@ -3,7 +3,7 @@ import board
 import adafruit_dotstar as dotstar
 
 NUM_PIXELS = 73
-BRIGHTNESS = 0.09
+BRIGHTNESS = 0.5
 
 
 UNIT_MULTIPLIER = {
@@ -20,20 +20,7 @@ MAX_JITTER = 100.0
 RED_BAND_WIDTH = 5
 
 
-#def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
-#    # Sanity check
-#    if value > maximum:
-#        print(f'value {value} exceeds maximum {maximum}')
-#        maximum = value
-#
-#    minimum, maximum = float(minimum), float(maximum)
-#    ratio = 2 * (value-minimum) / (maximum - minimum)
-#    b = int(max(0, 255*(1 - ratio)))
-#    r = int(max(0, 255*(ratio - 1)))
-#    g = 255 - b - r
-#    return (r, g, b)
-
-def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
+def kbyte_rgb(value, minimum=0.0, maximum=MAX_JITTER):
     # Sanity check
     if value > maximum:
         print(f'value {value} exceeds maximum {maximum}')
@@ -41,13 +28,13 @@ def kbyte_rgb(value, minimum=0.0, maximum=MAX_BITRATE):
 
     minimum, maximum = float(minimum), float(maximum)
 
-    red_ratio = pow((value - minimum), 1.4) / (maximum - minimum)
-    #blue_ratio = pow((value - minimum), .8) / (maximum - minimum)
-    green_ratio = pow((value - minimum), 1.7) / (maximum - minimum)
+    green_ratio = pow((value - minimum), 2.3) / (maximum - minimum)
+    blue_ratio = pow((value - minimum) / (maximum - minimum), 1.3)
+    #red_ratio = pow((value - minimum), 1.4) / (maximum - minimum)
 
-    r = min(255, int(max(0, 255*(1 - red_ratio))))
     g = min(255, int(max(0, 255*(1 - green_ratio))))
-    b = min(255, max(0, 255 - (.3*r) - (.7*g)))
+    b = min(255, int(max(0, 255*(1 - blue_ratio))))
+    r = min(255, int(max(0, 255 - (.3*g) - (.7*b))))
     return (r, g, b)
 
 

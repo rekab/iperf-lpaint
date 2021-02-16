@@ -1,14 +1,16 @@
+from aiohttp import web
 import atexit
 import asyncio
-import os
+import http_handlers
 import iperf3_output_state
 import lightbar
+import os
 
 
 # iperf3  -B 10.5.5.1 -s -i .5 -f k --forceflush
 IPERF3_SERVER_COMMAND = [
     #'/usr/bin/iperf3',
-    '/home/pi/download/iperf-3.9/src/iperf3',
+    '/home/pi/download/iperf-3.9/src/iperf3',  # local build has --forceflush fix
     '-B', '10.5.5.1',   # bind to wlan ip
     '-s',               # server
     '-i', '0.5',        # print stats every .5 seconds
@@ -66,14 +68,21 @@ async def run_iperf_server():
     killer_lambda = lambda pid: os.kill(proc.pid, 15)
     atexit.register(killer_lambda, proc.pid)
 
-
     state_machine = iperf3_output_state.IperfServerStateDriver(
             #bitrate_subscriber=dotpainter.bitrate_subscriber,
             jitter_subscriber=dotpainter.jitter_subscriber,
             listening_subscriber=dotpainter.listening_subscriber)
 
+    app = web.Application()
+    handler = http_handlers.Handler(state_machine, dotpainter)
+    app.add_routes([web.get('/', handler.status)])
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', 8080)
+    await site.start()
 
     await asyncio.wait([read_iperf_proc(proc, state_machine, killer_lambda)])
 
 
-asyncio.run(run_iperf_server())
+if __name__ == '__main__':
+    asyncio.run(run_iperf_server())
