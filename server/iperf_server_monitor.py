@@ -5,6 +5,7 @@ import http_handlers
 import iperf3_output_state
 import lightbar
 import os
+import time
 
 
 # iperf3  -B 10.5.5.1 -s -i .5 -f k --forceflush
@@ -23,7 +24,8 @@ async def read_iperf_proc(proc, state_machine, killer_lambda):
     while True:
         data = await proc.stdout.readline()
         line = data.decode('ascii').rstrip()
-        print(f'read line: {line}')
+        now = time.strftime("%Y-%m-%d %H:%M:%S")
+        print(f'{now}: read line: {line}')
         state_machine.receive_line(line)
         if proc.stdout.at_eof():
             print('stdout eof')
