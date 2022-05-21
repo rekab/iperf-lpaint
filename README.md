@@ -21,7 +21,7 @@ The other runs the iPerf client.
 The client boots up, gets an IP address from the server via DHCP, then runs the
 iPerf client.
 
-````
+```
 sudo systemctl enable ssh
 sudo systemctl start ssh
 sudo dpkg-reconfigure tzdata
